@@ -5,13 +5,17 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-express-server');
 	grunt.loadNpmTasks('grunt-jscs');
+	grunt.loadNpmTasks('grunt-contrib-clean');
+	grunt.loadNpmTasks('grunt-contrib-copy');
+	grunt.loadNpmTasks('grunt-browserify');
 
 	var filesToWatch = [
 		'server.js',
 		'expressRouter.js',
 		'tests/*.js',
 		'app/*.js',
-		'models/*.js'
+		'app/**/*.js',
+		'models/*.js',
 	];
 
 	grunt.initConfig({
@@ -32,6 +36,41 @@ module.exports = function(grunt) {
 		},
 
 		// Build
+		clean: {
+			all: {
+				src: [
+					'dist/'
+				]
+			}
+		},
+
+		copy: {
+			all : {
+				expand: true,
+				cwd: 'app/',
+				src: [
+					'*.html',
+					'**/*.html'
+				],
+				dest: 'dist/',
+				filter: 'isFile'
+			}
+		},
+
+		browserify: {
+			dev: {
+				options: {
+					transform: [
+						'debowerify'
+					],
+					debug: true
+				},
+				src: [
+					'app/**/*.js'
+				],
+				dest: 'dist/scripts.js'
+			}
+		},
 
 		// Serve and watch
 		express: {
@@ -45,15 +84,13 @@ module.exports = function(grunt) {
 
 		watch: {
 			all: {
-				files: [
-					'*.js',
-					'models/*',
-					'app/*',
-					'tests/*'
-				],
+				files: filesToWatch,
 				tasks: [
 					'jshint',
 					'jscs',
+					'clean',
+					'copy',
+					'browserify:dev',
 					'express:dev'
 				]
 			}
@@ -64,6 +101,9 @@ module.exports = function(grunt) {
 	grunt.registerTask('default', [
 			'jshint',
 			'jscs',
+			'clean',
+			'copy',
+			'browserify:dev',
 			'express:dev',
 			'watch:all'
 		]);
