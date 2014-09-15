@@ -9,7 +9,7 @@ var linkShare = angular.module('linkShare', [
 	]);
 
 // Services
-require('./services/talkToServer')(linkShare);
+require('./services/httpService')(linkShare);
 
 // Models
 
@@ -19,54 +19,114 @@ require('./controllers/initController')(linkShare);
 // Directives
 
 // Routes
-linkShare.config([ '$routeProvider', '$locationProvider', function($routeProvider, $locationProvider) {
-	$routeProvider
-	.when('/', {
-		controller: 'initController',
-		templateUrl: 'views/initView.html'
-	})
-	.otherwise({
-		redirectTo: '/'
-	});
+linkShare.config([ '$routeProvider', '$locationProvider',
+	function($routeProvider, $locationProvider) {
+		$routeProvider
+		.when('/', {
+			controller: 'initController',
+			templateUrl: 'views/initView.html'
+		})
+		.otherwise({
+			redirectTo: '/'
+		});
 
-	$locationProvider.html5Mode(true);
+		$locationProvider.html5Mode(true);
 } ]);
-},{"./../bower_components/angular-route/angular-route.js":4,"./../bower_components/angular/angular":5,"./controllers/initController":2,"./services/talkToServer":3}],2:[function(require,module,exports){
+},{"./../bower_components/angular-route/angular-route.js":4,"./../bower_components/angular/angular":5,"./controllers/initController":2,"./services/httpService":3}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = function(app) {
 	app.controller('initController',
-		[ '$scope', 'talkToServer',
-		function($scope, talkToServer) {
+		[ '$scope', 'httpService',
+		function($scope, httpService) {
 
+			$scope.newLink = {};
+			$scope.newLink.linkBody = '';
+
+	    // Create
+	    $scope.saveNewLink = function() {
+	    	httpService.post($scope.newLink)
+	    	.success(function() {
+	    		$scope.getAllLinks();
+	    	});
+	    	$scope.newLink.linkBody = ''; // Reset the form
+	    };
+
+			// Read
 			$scope.getAllLinks = function() {
-	      talkToServer.get()
+	      httpService.get()
         .success(function(data) {
            $scope.links = data;
         });
 	    };
-	    $scope.getAllLinks();
+	    $scope.getAllLinks(); // Grab the data when the controller loads
 
-			$scope.message = 'Hello, world!';
+	    // Update
+	    $scope.updateLink = function(link) {
+	    	link.editing = true;
+	    };
+	    $scope.saveOldLink = function(link) {
+	    	httpService.put(link)
+        .success(function() {
+          $scope.getAllLinks();
+        });
+	    };
+
+	    // Delete
+	    $scope.deleteLink = function(link) {
+	    	httpService.delete(link)
+	    	.success(function() {
+	    		$scope.getAllLinks();
+	    	});
+	    };
+
 		} ]);
 };
 },{}],3:[function(require,module,exports){
 'use strict';
 
 module.exports = function(app) {
-	app.factory('talkToServer', function($http) {
-		var httpVerbs = {
-			get: function() {
-				var promise = $http({
-					method: 'GET',
-					url: '/api/001'
-				})
-				.error(function(data, status) {
-					console.log('error in $http GET! ' + data + ' | ' + status);
-				});
+	app.factory('httpService', function($http) {
 
-				return promise;
+		// Generic helper function
+		var http = function(method, params) {
+			params.id = params.id || '';
+			var promise = $http[method]('/api/001/' + params.id, params.data)
+			.error(function(error, status) {
+				console.log('Error in http ' + method + ': ' + error + ' | status ' + status);
+			});
+			return promise;
+		},
+
+		httpVerbs = {
+
+			get: function() {
+				return http('get', {});
+			},
+
+			post: function(link) {
+				return http('post', {
+					data: {
+						linkBody: link.linkBody
+					}
+				});
+			},
+
+			put: function(link) {
+				return http('put', {
+					data: {
+						linkBody: link.linkBody
+					},
+					id: link._id
+				});
+			},
+
+			delete: function(link) {
+				return http('delete', {
+					id: link._id
+				});
 			}
+
 		};
 
 		return httpVerbs;

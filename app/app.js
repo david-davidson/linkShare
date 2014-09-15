@@ -8,7 +8,7 @@ var linkShare = angular.module('linkShare', [
 	]);
 
 // Services
-require('./services/talkToServer')(linkShare);
+require('./services/httpService')(linkShare);
 
 // Models
 
@@ -18,15 +18,16 @@ require('./controllers/initController')(linkShare);
 // Directives
 
 // Routes
-linkShare.config([ '$routeProvider', '$locationProvider', function($routeProvider, $locationProvider) {
-	$routeProvider
-	.when('/', {
-		controller: 'initController',
-		templateUrl: 'views/initView.html'
-	})
-	.otherwise({
-		redirectTo: '/'
-	});
+linkShare.config([ '$routeProvider', '$locationProvider',
+	function($routeProvider, $locationProvider) {
+		$routeProvider
+		.when('/', {
+			controller: 'initController',
+			templateUrl: 'views/initView.html'
+		})
+		.otherwise({
+			redirectTo: '/'
+		});
 
-	$locationProvider.html5Mode(true);
+		$locationProvider.html5Mode(true);
 } ]);
