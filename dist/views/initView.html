@@ -1,5 +1,31 @@
+<form>
+	<input data-ng-model="newLink.linkBody">
+	<button data-ng-click="saveNewLink()">
+		Add a new link!
+	</button>
+</form>
+
 <ul>
 	<li data-ng-repeat="link in links">
-		{{link.linkBody}}
+		<div data-ng-hide="link.editing">
+			{{link.linkBody}}
+			<button data-ng-click="updateLink(link)">
+				Edit link
+			</button>
+			<button data-ng-click="deleteLink(link)">
+				Delete link
+			</button>
+		</div>
+
+		<div data-ng-show="link.editing">
+			<h2>Update your link:</h2>
+			<form>
+				<input data-ng-model="link.linkBody">
+				<button data-ng-click="saveOldLink(link)">
+					Update
+				</button>
+			</form>
+		</div>
+
 	</li>
 </ul>
