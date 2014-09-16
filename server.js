@@ -2,15 +2,13 @@
 
 var express,
 	http,
-	fs,
 	bodyparser,
 	mongoose,
 	passport,
 	app,
 	port,
 	server,
-	jwtAuth,
-	options;
+	jwtAuth;
 
 // Dependencies
 express = require('express');
@@ -33,8 +31,6 @@ app.set('secret', process.env.SECRET || 'changeMeChangeMeChangeMe'); // We never
 
 app.use(passport.initialize());
 require('./lib/passport')(passport);
-
-
 
 // Routing
 app.use(bodyparser.json());
