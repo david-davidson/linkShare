@@ -3,9 +3,13 @@
 
 require("./../bower_components/angular/angular");
 require("./../bower_components/angular-route/angular-route.js");
+require("./../bower_components/angular-cookies/angular-cookies.js");
+require("./../bower_components/angular-base64/angular-base64.js");
 
 var linkShare = angular.module('linkShare', [
-		'ngRoute'
+		'ngRoute',
+		'base64',
+		'ngCookies'
 	]);
 
 // Services
@@ -15,6 +19,7 @@ require('./services/httpService')(linkShare);
 
 // Controllers
 require('./controllers/initController')(linkShare);
+require('./controllers/signInController')(linkShare);
 
 // Directives
 
@@ -22,26 +27,33 @@ require('./controllers/initController')(linkShare);
 linkShare.config([ '$routeProvider', '$locationProvider',
 	function($routeProvider, $locationProvider) {
 		$routeProvider
-		.when('/', {
+		.when('/links', {
 			controller: 'initController',
 			templateUrl: 'views/initView.html'
 		})
+		.when('/signin', {
+      templateUrl: 'views/signInView.html',
+      controller: 'signInController'
+    })
 		.otherwise({
-			redirectTo: '/'
+			redirectTo: '/links'
 		});
 
 		$locationProvider.html5Mode(true);
 } ]);
-},{"./../bower_components/angular-route/angular-route.js":4,"./../bower_components/angular/angular":5,"./controllers/initController":2,"./services/httpService":3}],2:[function(require,module,exports){
+},{"./../bower_components/angular-base64/angular-base64.js":5,"./../bower_components/angular-cookies/angular-cookies.js":6,"./../bower_components/angular-route/angular-route.js":7,"./../bower_components/angular/angular":8,"./controllers/initController":2,"./controllers/signInController":3,"./services/httpService":4}],2:[function(require,module,exports){
 'use strict';
 
 module.exports = function(app) {
 	app.controller('initController',
-		[ '$scope', 'httpService',
-		function($scope, httpService) {
+		[ '$scope', 'httpService', '$http', '$cookies', '$location',
+		function($scope, httpService, $http, $cookies, $location) {
 
 			$scope.newLink = {};
 			$scope.newLink.linkBody = '';
+
+			$http.defaults.headers.common.jwt = $cookies.jwt; // jshint ignore: line
+			console.log('cookies: ' + $http.defaults.headers.common.jwt); // jshint ignore: line
 
 	    // Create
 	    $scope.saveNewLink = function() {
@@ -80,13 +92,60 @@ module.exports = function(app) {
 	    	});
 	    };
 
+	    $scope.signOut = function() {
+	    	delete $cookies.jwt;
+	    	$location.path('/signin');
+	    };
+
 		} ]);
 };
 },{}],3:[function(require,module,exports){
 'use strict';
 
 module.exports = function(app) {
-	app.factory('httpService', function($http) {
+  app.controller('signInController', [
+    '$scope', '$http', '$base64', '$cookies', '$location',
+    function($scope, $http, $base64, $cookies, $location) {
+      $scope.signIn = function() {
+        $http.defaults.headers.common.Authentication = 'Basic ' + // jshint ignore: line
+          $base64.encode(
+            $scope.user.email + ':' +
+            $scope.user.password
+          );
+        $http({
+          method: 'GET',
+          url: '/api/001/users'
+        })
+        .success(function(data) {
+          $cookies.jwt = data.jwt;
+          $location.path('/links');
+        })
+        .error(function(error) {
+          console.log('error in signInController! ' + error);
+        });
+      };
+
+      $scope.createNewUser = function() {
+        $http.post('/api/001/users', {
+          'email': $scope.user.newEmail,
+          'password': $scope.user.newPassword
+        })
+        .success(function(data) {
+          $cookies.jwt = data.jwt;
+          $location.path('/links');
+        })
+        .error(function(error) {
+          console.log('error in signInController! ' + error);
+        });
+      };
+    }
+  ]);
+};
+},{}],4:[function(require,module,exports){
+'use strict';
+
+module.exports = function(app) {
+	app.factory('httpService', function($http, $location) {
 
 		// Generic helper function
 		var http = function(method, params) {
@@ -94,6 +153,10 @@ module.exports = function(app) {
 			var promise = $http[method]('/api/001/' + params.id, params.data)
 			.error(function(error, status) {
 				console.log('Error in http ' + method + ': ' + error + ' | status ' + status);
+				if (status === 401) {
+					console.log('401 error in httpService!');
+					$location.path('/signin');
+				}
 			});
 			return promise;
 		},
@@ -132,7 +195,383 @@ module.exports = function(app) {
 		return httpVerbs;
 	});
 };
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
+(function() {
+    'use strict';
+
+    /*
+     * Encapsulation of Nick Galbreath's base64.js library for AngularJS
+     * Original notice included below
+     */
+
+    /*
+     * Copyright (c) 2010 Nick Galbreath
+     * http://code.google.com/p/stringencoders/source/browse/#svn/trunk/javascript
+     *
+     * Permission is hereby granted, free of charge, to any person
+     * obtaining a copy of this software and associated documentation
+     * files (the "Software"), to deal in the Software without
+     * restriction, including without limitation the rights to use,
+     * copy, modify, merge, publish, distribute, sublicense, and/or sell
+     * copies of the Software, and to permit persons to whom the
+     * Software is furnished to do so, subject to the following
+     * conditions:
+     *
+     * The above copyright notice and this permission notice shall be
+     * included in all copies or substantial portions of the Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+     * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+     * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+     * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+     * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+     * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+     * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+     * OTHER DEALINGS IN THE SOFTWARE.
+     */
+
+    /* base64 encode/decode compatible with window.btoa/atob
+     *
+     * window.atob/btoa is a Firefox extension to convert binary data (the "b")
+     * to base64 (ascii, the "a").
+     *
+     * It is also found in Safari and Chrome.  It is not available in IE.
+     *
+     * if (!window.btoa) window.btoa = base64.encode
+     * if (!window.atob) window.atob = base64.decode
+     *
+     * The original spec's for atob/btoa are a bit lacking
+     * https://developer.mozilla.org/en/DOM/window.atob
+     * https://developer.mozilla.org/en/DOM/window.btoa
+     *
+     * window.btoa and base64.encode takes a string where charCodeAt is [0,255]
+     * If any character is not [0,255], then an exception is thrown.
+     *
+     * window.atob and base64.decode take a base64-encoded string
+     * If the input length is not a multiple of 4, or contains invalid characters
+     *   then an exception is thrown.
+     */
+
+    angular.module('base64', []).constant('$base64', (function() {
+
+        var PADCHAR = '=';
+
+        var ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+        function getbyte64(s,i) {
+            var idx = ALPHA.indexOf(s.charAt(i));
+            if (idx == -1) {
+                throw "Cannot decode base64";
+            }
+            return idx;
+        }
+
+        function decode(s) {
+            // convert to string
+            s = "" + s;
+            var pads, i, b10;
+            var imax = s.length;
+            if (imax == 0) {
+                return s;
+            }
+
+            if (imax % 4 != 0) {
+                throw "Cannot decode base64";
+            }
+
+            pads = 0;
+            if (s.charAt(imax -1) == PADCHAR) {
+                pads = 1;
+                if (s.charAt(imax -2) == PADCHAR) {
+                    pads = 2;
+                }
+                // either way, we want to ignore this last block
+                imax -= 4;
+            }
+
+            var x = [];
+            for (i = 0; i < imax; i += 4) {
+                b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) |
+                    (getbyte64(s,i+2) << 6) | getbyte64(s,i+3);
+                x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff, b10 & 0xff));
+            }
+
+            switch (pads) {
+                case 1:
+                    b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12) | (getbyte64(s,i+2) << 6);
+                    x.push(String.fromCharCode(b10 >> 16, (b10 >> 8) & 0xff));
+                    break;
+                case 2:
+                    b10 = (getbyte64(s,i) << 18) | (getbyte64(s,i+1) << 12);
+                    x.push(String.fromCharCode(b10 >> 16));
+                    break;
+            }
+            return x.join('');
+        }
+
+        function getbyte(s,i) {
+            var x = s.charCodeAt(i);
+            if (x > 255) {
+                throw "INVALID_CHARACTER_ERR: DOM Exception 5";
+            }
+            return x;
+        }
+
+        function encode(s) {
+            if (arguments.length != 1) {
+                throw "SyntaxError: Not enough arguments";
+            }
+
+            var i, b10;
+            var x = [];
+
+            // convert to string
+            s = "" + s;
+
+            var imax = s.length - s.length % 3;
+
+            if (s.length == 0) {
+                return s;
+            }
+            for (i = 0; i < imax; i += 3) {
+                b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8) | getbyte(s,i+2);
+                x.push(ALPHA.charAt(b10 >> 18));
+                x.push(ALPHA.charAt((b10 >> 12) & 0x3F));
+                x.push(ALPHA.charAt((b10 >> 6) & 0x3f));
+                x.push(ALPHA.charAt(b10 & 0x3f));
+            }
+            switch (s.length - imax) {
+                case 1:
+                    b10 = getbyte(s,i) << 16;
+                    x.push(ALPHA.charAt(b10 >> 18) + ALPHA.charAt((b10 >> 12) & 0x3F) +
+                        PADCHAR + PADCHAR);
+                    break;
+                case 2:
+                    b10 = (getbyte(s,i) << 16) | (getbyte(s,i+1) << 8);
+                    x.push(ALPHA.charAt(b10 >> 18) + ALPHA.charAt((b10 >> 12) & 0x3F) +
+                        ALPHA.charAt((b10 >> 6) & 0x3f) + PADCHAR);
+                    break;
+            }
+            return x.join('');
+        }
+
+        return {
+            encode: encode,
+            decode: decode
+        };
+    })());
+
+})();
+
+},{}],6:[function(require,module,exports){
+/**
+ * @license AngularJS v1.2.24
+ * (c) 2010-2014 Google, Inc. http://angularjs.org
+ * License: MIT
+ */
+(function(window, angular, undefined) {'use strict';
+
+/**
+ * @ngdoc module
+ * @name ngCookies
+ * @description
+ *
+ * # ngCookies
+ *
+ * The `ngCookies` module provides a convenient wrapper for reading and writing browser cookies.
+ *
+ *
+ * <div doc-module-components="ngCookies"></div>
+ *
+ * See {@link ngCookies.$cookies `$cookies`} and
+ * {@link ngCookies.$cookieStore `$cookieStore`} for usage.
+ */
+
+
+angular.module('ngCookies', ['ng']).
+  /**
+   * @ngdoc service
+   * @name $cookies
+   *
+   * @description
+   * Provides read/write access to browser's cookies.
+   *
+   * Only a simple Object is exposed and by adding or removing properties to/from this object, new
+   * cookies are created/deleted at the end of current $eval.
+   * The object's properties can only be strings.
+   *
+   * Requires the {@link ngCookies `ngCookies`} module to be installed.
+   *
+   * @example
+   *
+   * ```js
+   * angular.module('cookiesExample', ['ngCookies'])
+   *   .controller('ExampleController', ['$cookies', function($cookies) {
+   *     // Retrieving a cookie
+   *     var favoriteCookie = $cookies.myFavorite;
+   *     // Setting a cookie
+   *     $cookies.myFavorite = 'oatmeal';
+   *   }]);
+   * ```
+   */
+   factory('$cookies', ['$rootScope', '$browser', function ($rootScope, $browser) {
+      var cookies = {},
+          lastCookies = {},
+          lastBrowserCookies,
+          runEval = false,
+          copy = angular.copy,
+          isUndefined = angular.isUndefined;
+
+      //creates a poller fn that copies all cookies from the $browser to service & inits the service
+      $browser.addPollFn(function() {
+        var currentCookies = $browser.cookies();
+        if (lastBrowserCookies != currentCookies) { //relies on browser.cookies() impl
+          lastBrowserCookies = currentCookies;
+          copy(currentCookies, lastCookies);
+          copy(currentCookies, cookies);
+          if (runEval) $rootScope.$apply();
+        }
+      })();
+
+      runEval = true;
+
+      //at the end of each eval, push cookies
+      //TODO: this should happen before the "delayed" watches fire, because if some cookies are not
+      //      strings or browser refuses to store some cookies, we update the model in the push fn.
+      $rootScope.$watch(push);
+
+      return cookies;
+
+
+      /**
+       * Pushes all the cookies from the service to the browser and verifies if all cookies were
+       * stored.
+       */
+      function push() {
+        var name,
+            value,
+            browserCookies,
+            updated;
+
+        //delete any cookies deleted in $cookies
+        for (name in lastCookies) {
+          if (isUndefined(cookies[name])) {
+            $browser.cookies(name, undefined);
+          }
+        }
+
+        //update all cookies updated in $cookies
+        for(name in cookies) {
+          value = cookies[name];
+          if (!angular.isString(value)) {
+            value = '' + value;
+            cookies[name] = value;
+          }
+          if (value !== lastCookies[name]) {
+            $browser.cookies(name, value);
+            updated = true;
+          }
+        }
+
+        //verify what was actually stored
+        if (updated){
+          updated = false;
+          browserCookies = $browser.cookies();
+
+          for (name in cookies) {
+            if (cookies[name] !== browserCookies[name]) {
+              //delete or reset all cookies that the browser dropped from $cookies
+              if (isUndefined(browserCookies[name])) {
+                delete cookies[name];
+              } else {
+                cookies[name] = browserCookies[name];
+              }
+              updated = true;
+            }
+          }
+        }
+      }
+    }]).
+
+
+  /**
+   * @ngdoc service
+   * @name $cookieStore
+   * @requires $cookies
+   *
+   * @description
+   * Provides a key-value (string-object) storage, that is backed by session cookies.
+   * Objects put or retrieved from this storage are automatically serialized or
+   * deserialized by angular's toJson/fromJson.
+   *
+   * Requires the {@link ngCookies `ngCookies`} module to be installed.
+   *
+   * @example
+   *
+   * ```js
+   * angular.module('cookieStoreExample', ['ngCookies'])
+   *   .controller('ExampleController', ['$cookieStore', function($cookieStore) {
+   *     // Put cookie
+   *     $cookieStore.put('myFavorite','oatmeal');
+   *     // Get cookie
+   *     var favoriteCookie = $cookieStore.get('myFavorite');
+   *     // Removing a cookie
+   *     $cookieStore.remove('myFavorite');
+   *   }]);
+   * ```
+   */
+   factory('$cookieStore', ['$cookies', function($cookies) {
+
+      return {
+        /**
+         * @ngdoc method
+         * @name $cookieStore#get
+         *
+         * @description
+         * Returns the value of given cookie key
+         *
+         * @param {string} key Id to use for lookup.
+         * @returns {Object} Deserialized cookie value.
+         */
+        get: function(key) {
+          var value = $cookies[key];
+          return value ? angular.fromJson(value) : value;
+        },
+
+        /**
+         * @ngdoc method
+         * @name $cookieStore#put
+         *
+         * @description
+         * Sets a value for given cookie key
+         *
+         * @param {string} key Id for the `value`.
+         * @param {Object} value Value to be stored.
+         */
+        put: function(key, value) {
+          $cookies[key] = angular.toJson(value);
+        },
+
+        /**
+         * @ngdoc method
+         * @name $cookieStore#remove
+         *
+         * @description
+         * Remove given cookie
+         *
+         * @param {string} key Id of the key-value pair to delete.
+         */
+        remove: function(key) {
+          delete $cookies[key];
+        }
+      };
+
+    }]);
+
+
+})(window, window.angular);
+
+},{}],7:[function(require,module,exports){
 /**
  * @license AngularJS v1.2.24
  * (c) 2010-2014 Google, Inc. http://angularjs.org
@@ -1059,7 +1498,7 @@ function ngViewFillContentFactory($compile, $controller, $route) {
 
 })(window, window.angular);
 
-},{}],5:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /**
  * @license AngularJS v1.2.24
  * (c) 2010-2014 Google, Inc. http://angularjs.org
@@ -23072,4 +23511,4 @@ var styleDirective = valueFn({
 })(window, document);
 
 !window.angular.$$csp() && window.angular.element(document).find('head').prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide{display:none !important;}ng\\:form{display:block;}.ng-animate-block-transitions{transition:0s all!important;-webkit-transition:0s all!important;}.ng-hide-add-active,.ng-hide-remove{display:block!important;}</style>');
-},{}]},{},[1,2,3]);
+},{}]},{},[1,2,3,4]);

@@ -2,7 +2,7 @@
 
 var Link = require('./models/linkModel');
 
-module.exports = function(app) {
+module.exports = function(app, jwtAuth) {
 	var apiUrl = '/api/001';
 
 	// CREATE
@@ -17,12 +17,12 @@ module.exports = function(app) {
 	});
 
 	// READ
-	app.get(apiUrl, function(req, res) {
+	app.get(apiUrl, jwtAuth, function(req, res) {
 		Link.find({}, function(err, link) {
 			if (err) {
 				return res.status(500).json(err);
 			}
-			return res.json(link);
+			return res.status(200).json(link);
 		});
 	});
 

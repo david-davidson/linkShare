@@ -1,0 +1,37 @@
+<div ng-controller="signInController">
+  <h3>
+  	Sign In
+	</h3>
+
+  <label>
+	  Email
+  </label>
+  <input type="text" ng-model="user.email">
+
+  <label>
+	  Password
+  </label>
+  <input type="password" ng-model="user.password">
+
+  <button ng-click="signIn()">Sign In</button>
+</div>
+
+<hr>
+
+<div ng-controller="signInController">
+  <h3>
+  	Or create an account
+	</h3>
+
+  <label>
+	  Email
+  </label>
+  <input type="text" ng-model="user.newEmail">
+
+  <label>
+	  Password
+  </label>
+  <input type="password" ng-model="user.newPassword">
+
+  <button ng-click="createNewUser()">Create account</button>
+</div>

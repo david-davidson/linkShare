@@ -12,10 +12,12 @@ module.exports = function(grunt) {
 	var filesToWatch = [
 		'server.js',
 		'expressRouter.js',
+		'userRouter.js',
 		'tests/*.js',
 		'app/*.js',
 		'app/**/*.js',
 		'models/*.js',
+		'lib/*.js'
 	];
 
 	grunt.initConfig({

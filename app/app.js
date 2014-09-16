@@ -2,9 +2,13 @@
 
 require('angular/angular');
 require('angular-route');
+require('angular-cookies');
+require('angular-base64');
 
 var linkShare = angular.module('linkShare', [
-		'ngRoute'
+		'ngRoute',
+		'base64',
+		'ngCookies'
 	]);
 
 // Services
@@ -14,6 +18,7 @@ require('./services/httpService')(linkShare);
 
 // Controllers
 require('./controllers/initController')(linkShare);
+require('./controllers/signInController')(linkShare);
 
 // Directives
 
@@ -21,12 +26,16 @@ require('./controllers/initController')(linkShare);
 linkShare.config([ '$routeProvider', '$locationProvider',
 	function($routeProvider, $locationProvider) {
 		$routeProvider
-		.when('/', {
+		.when('/links', {
 			controller: 'initController',
 			templateUrl: 'views/initView.html'
 		})
+		.when('/signin', {
+      templateUrl: 'views/signInView.html',
+      controller: 'signInController'
+    })
 		.otherwise({
-			redirectTo: '/'
+			redirectTo: '/links'
 		});
 
 		$locationProvider.html5Mode(true);

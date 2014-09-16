@@ -2,11 +2,14 @@
 
 module.exports = function(app) {
 	app.controller('initController',
-		[ '$scope', 'httpService',
-		function($scope, httpService) {
+		[ '$scope', 'httpService', '$http', '$cookies', '$location',
+		function($scope, httpService, $http, $cookies, $location) {
 
 			$scope.newLink = {};
 			$scope.newLink.linkBody = '';
+
+			$http.defaults.headers.common.jwt = $cookies.jwt; // jshint ignore: line
+			console.log('cookies: ' + $http.defaults.headers.common.jwt); // jshint ignore: line
 
 	    // Create
 	    $scope.saveNewLink = function() {
@@ -43,6 +46,11 @@ module.exports = function(app) {
 	    	.success(function() {
 	    		$scope.getAllLinks();
 	    	});
+	    };
+
+	    $scope.signOut = function() {
+	    	delete $cookies.jwt;
+	    	$location.path('/signin');
 	    };
 
 		} ]);
