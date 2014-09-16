@@ -13,6 +13,7 @@ module.exports = function(app, passport) {
 
 	app.post('/api/001/users', function(req, res) {
 		UserModel.findOne({ 'basic.email': req.body.email }, function(err, user) {
+
 			// Errors, duplicates, etc...
 			if (err) {
 				console.log('error in user model\'s search for user!');
