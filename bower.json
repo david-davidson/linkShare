@@ -13,6 +13,8 @@
   ],
   "dependencies": {
     "angular-route": "~1.2.24",
-    "angular": "~1.2.24"
+    "angular": "~1.2.24",
+    "angular-base64": "~2.0.2",
+    "angular-cookies": "~1.2.24"
   }
 }
