@@ -2,14 +2,17 @@
 
 var express,
 	http,
+	fs,
 	bodyparser,
 	mongoose,
 	passport,
 	app,
 	port,
 	server,
-	jwtAuth;
+	jwtAuth,
+	options;
 
+// Dependencies
 express = require('express');
 http = require('http');
 bodyparser = require('body-parser');
@@ -17,7 +20,6 @@ mongoose = require('mongoose');
 passport = require('passport');
 
 app = express();
-port = process.env.PORT || 3000;
 
 // Set Mongo URLs
 mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGO_URL || 'mongodb://localhost/links');
@@ -25,24 +27,26 @@ mongoose.connect(process.env.MONGOLAB_URI || process.env.MONGO_URL || 'mongodb:/
 // Specify the static directory
 app.use(express.static(__dirname + (process.env.STATIC_DIR || '/dist')));
 
-// Set the JWT secret
-app.set('jwtTokenSecret', process.env.JWT_SECRET || 'devSecret');
-app.set('secret', process.env.SECRET || 'devSecret'); // We never actually use this; passport just requires it
+// Auth:
+app.set('jwtTokenSecret', process.env.JWT_SECRET || 'changeMeChangeMeChangeMe');
+app.set('secret', process.env.SECRET || 'changeMeChangeMeChangeMe'); // We never actually use this; passport just requires it
 
-// Initialize passport
 app.use(passport.initialize());
-
 require('./lib/passport')(passport);
-jwtAuth = require('./lib/jwtAuth')(app);
 
-app.use(bodyparser.json());
+
 
 // Routing
+app.use(bodyparser.json());
+jwtAuth = require('./lib/jwtAuth')(app);
+
 require('./userRouter')(app, passport);
-require('./expressRouter')(app, jwtAuth.auth);
+require('./expressRouter')(app, jwtAuth.auth); // Note that we pass in only the function!
 
 // Init
 server = http.createServer(app);
+
+port = process.env.PORT || 3000;
 
 server.listen(port, function() {
 	console.log('Lookin legit on port %d', port);
