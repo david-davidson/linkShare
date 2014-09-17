@@ -47,5 +47,6 @@ module.exports = function(app, passport) {
 		passport.authenticate('basic', { session: false }),
 		function(req, res) {
 			res.json({ 'jwt': req.user.createToken(app) });
-		});
+		}
+	);
 };

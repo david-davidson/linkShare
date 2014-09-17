@@ -49,8 +49,8 @@ module.exports = function(app) {
 	    };
 
 	    $scope.signOut = function() {
-	    	delete $cookies.jwt;
-	    	$location.path('/signin');
+	    	$cookies.jwt = null;
+	    	$location.path('/');
 	    };
 
 		} ]);
